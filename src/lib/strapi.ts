@@ -26,7 +26,13 @@ export async function fetchAPI<T>({
 
   if (query) {
     Object.entries(query).forEach(([key, value]) => {
-      url.searchParams.set(key, value);
+      if (key === 'populate' && value.includes(',')) {
+        value.split(',').forEach((v, i) => {
+          url.searchParams.set(`populate[${i}]`, v.trim());
+        });
+      } else {
+        url.searchParams.set(key, value);
+      }
     });
   }
 
