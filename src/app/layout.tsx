@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { ClientProviders } from '@/components/providers/ClientProviders';
 import { SITE_NAME, SITE_URL } from '@/lib/constants';
 
 const inter = Inter({
@@ -46,9 +47,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${inter.variable} antialiased`}>
-        <Header />
-        <main className="min-h-screen">{children}</main>
-        <Footer />
+        <ClientProviders>
+          <Header />
+          <main className="min-h-screen">{children}</main>
+          <Footer />
+        </ClientProviders>
       </body>
     </html>
   );

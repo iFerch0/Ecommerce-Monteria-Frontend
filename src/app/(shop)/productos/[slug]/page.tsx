@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import Image from 'next/image';
 import { fetchAPI } from '@/lib/strapi';
 import { formatPrice, getImageUrl } from '@/lib/utils';
 import type { Product } from '@/types/product';
 import { SITE_NAME, ROUTES } from '@/lib/constants';
 import Link from 'next/link';
+import { AddToCartButton } from '@/components/product/AddToCartButton';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -92,12 +94,15 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         {/* Image Gallery */}
         <div>
           {/* Main image */}
-          <div className="border-border bg-surface-alt mb-3 aspect-square overflow-hidden rounded-2xl border">
+          <div className="border-border bg-surface-alt relative mb-3 aspect-square overflow-hidden rounded-2xl border">
             {allImages.length > 0 ? (
-              <img
+              <Image
                 src={getImageUrl(allImages[0].url)}
                 alt={allImages[0].alternativeText || product.name}
-                className="h-full w-full object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+                priority
               />
             ) : (
               <div className="text-text-muted flex h-full w-full items-center justify-center text-6xl">
@@ -112,14 +117,16 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               {allImages.map((img, i) => (
                 <div
                   key={img.id}
-                  className={`h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${
+                  className={`relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${
                     i === 0 ? 'border-accent' : 'border-border hover:border-accent/50'
                   }`}
                 >
-                  <img
+                  <Image
                     src={getImageUrl(img.url)}
                     alt={img.alternativeText || `${product.name} - ${i + 1}`}
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="80px"
+                    className="object-cover"
                   />
                 </div>
               ))}
@@ -235,6 +242,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               </div>
             </div>
           )}
+
+          {/* Add to Cart */}
+          <AddToCartButton product={product} />
 
           {/* Sizes */}
           {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
