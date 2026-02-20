@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 import type { Product } from '@/types/product';
 import { ROUTES } from '@/lib/constants';
@@ -23,10 +24,12 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Image */}
       <div className="bg-surface-alt relative aspect-square overflow-hidden">
         {imageUrl ? (
-          <img
+          <Image
             src={getImageUrl(imageUrl)}
             alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="text-text-muted flex h-full w-full items-center justify-center text-4xl">
