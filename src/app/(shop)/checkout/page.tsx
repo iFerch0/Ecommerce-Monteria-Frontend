@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useCartStore } from '@/stores/cartStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrderStore } from '@/stores/orderStore';
+import { WompiWidget } from '@/components/payment/WompiWidget';
 import { formatPrice } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
 
@@ -56,12 +57,17 @@ const DEPARTMENTS = [
 
 function CheckoutContent() {
   const { items, getSubtotal, clearCart } = useCartStore();
-  const { token } = useAuthStore();
-  const { createOrder, isLoading } = useOrderStore();
+  const { token, user } = useAuthStore();
+  const { createOrder, confirmPayment, isLoading } = useOrderStore();
   const router = useRouter();
   const [error, setError] = useState('');
-  const [step, setStep] = useState<'shipping' | 'review'>('shipping');
+  const [step, setStep] = useState<'shipping' | 'review' | 'payment'>('shipping');
   const [shippingData, setShippingData] = useState<ShippingFormData | null>(null);
+  const [wompiData, setWompiData] = useState<{
+    reference: string;
+    amountInCents: number;
+    signature: string;
+  } | null>(null);
 
   const {
     register,
@@ -79,7 +85,33 @@ function CheckoutContent() {
   const shippingCost = 0;
   const total = subtotal + shippingCost;
 
-  if (items.length === 0) {
+  const handleWompiSuccess = useCallback(
+    async (transaction: { id: string }) => {
+      if (wompiData && token) {
+        try {
+          await confirmPayment(wompiData.reference, transaction.id, token);
+        } catch (err) {
+          console.error('confirmPayment error:', err);
+          // El webhook de Wompi corregirá el estado como respaldo
+        }
+      }
+      clearCart();
+      if (wompiData) {
+        router.push(`${ROUTES.CONFIRMATION}?order=${wompiData.reference}`);
+      }
+    },
+    [clearCart, confirmPayment, router, token, wompiData]
+  );
+
+  const handleWompiClose = useCallback(() => {
+    // Payment was not approved — redirect to confirmation with pending status
+    if (wompiData) {
+      clearCart();
+      router.push(`${ROUTES.CONFIRMATION}?order=${wompiData.reference}`);
+    }
+  }, [clearCart, router, wompiData]);
+
+  if (items.length === 0 && step !== 'payment') {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <span className="mb-4 text-6xl">🛒</span>
@@ -128,8 +160,29 @@ function CheckoutContent() {
         token
       );
 
-      clearCart();
-      router.push(`${ROUTES.CONFIRMATION}?order=${result.orderNumber}`);
+      // Amount in cents for Wompi (prices are already in COP, multiply by 100)
+      const amountInCents = Math.round(result.total * 100);
+
+      // Get integrity signature from server
+      const sigRes = await fetch('/api/wompi/signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: result.orderNumber,
+          amountInCents,
+          currency: 'COP',
+        }),
+      });
+
+      if (!sigRes.ok) throw new Error('Error generando firma de pago');
+      const { signature } = await sigRes.json();
+
+      setWompiData({
+        reference: result.orderNumber,
+        amountInCents,
+        signature,
+      });
+      setStep('payment');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al procesar el pedido');
     }
@@ -154,7 +207,7 @@ function CheckoutContent() {
       {/* Steps indicator */}
       <div className="mb-8 flex items-center gap-4">
         <button
-          onClick={() => setStep('shipping')}
+          onClick={() => step !== 'payment' && setStep('shipping')}
           className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
             step === 'shipping'
               ? 'bg-accent text-white'
@@ -176,6 +229,17 @@ function CheckoutContent() {
             2
           </span>
           Confirmar
+        </div>
+        <div className="bg-border h-px flex-1" />
+        <div
+          className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+            step === 'payment' ? 'bg-accent text-white' : 'bg-surface-alt text-text-muted'
+          }`}
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
+            3
+          </span>
+          Pagar
         </div>
       </div>
 
@@ -289,7 +353,7 @@ function CheckoutContent() {
                 Continuar al resumen →
               </button>
             </form>
-          ) : (
+          ) : step === 'review' ? (
             <div className="border-border bg-surface space-y-4 rounded-2xl border p-6">
               <h2 className="text-text mb-2 text-lg font-bold">📋 Resumen del pedido</h2>
 
@@ -333,9 +397,9 @@ function CheckoutContent() {
                 ))}
               </div>
 
-              <div className="mt-4 rounded-lg bg-purple-50 p-3 text-xs text-purple-700">
-                <strong>💳 Método de pago:</strong> Pago contra entrega / Transferencia bancaria
-                (Wompi se integrará próximamente)
+              <div className="mt-4 rounded-lg bg-green-50 p-3 text-xs text-green-700">
+                <strong>💳 Pago seguro:</strong> Al confirmar, se abrirá la pasarela de pago Wompi
+                donde podrás pagar con tarjeta de crédito, débito, Nequi o PSE.
               </div>
 
               <button
@@ -343,8 +407,35 @@ function CheckoutContent() {
                 disabled={isLoading}
                 className="bg-accent hover:bg-accent-light w-full rounded-full py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? 'Procesando...' : `Confirmar pedido · ${formatPrice(total)}`}
+                {isLoading ? 'Procesando...' : `Pagar con Wompi · ${formatPrice(total)}`}
               </button>
+            </div>
+          ) : (
+            /* Payment step — Wompi Widget */
+            <div className="border-border bg-surface rounded-2xl border p-6">
+              <h2 className="text-text mb-4 text-lg font-bold">💳 Pasarela de pago</h2>
+              {wompiData && (
+                <WompiWidget
+                  amountInCents={wompiData.amountInCents}
+                  reference={wompiData.reference}
+                  signature={wompiData.signature}
+                  customerEmail={user?.email}
+                  customerName={shippingData?.fullName}
+                  customerPhone={shippingData?.phone}
+                  shippingAddress={
+                    shippingData
+                      ? {
+                          address: shippingData.address,
+                          city: shippingData.city,
+                          phone: shippingData.phone,
+                          department: shippingData.department,
+                        }
+                      : undefined
+                  }
+                  onSuccess={handleWompiSuccess}
+                  onClose={handleWompiClose}
+                />
+              )}
             </div>
           )}
         </div>

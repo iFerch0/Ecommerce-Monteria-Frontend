@@ -60,7 +60,7 @@ function OrdersContent() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => {
-            const status = STATUS_MAP[order.status] || STATUS_MAP.pending;
+            const status = STATUS_MAP[order.orderStatus] || STATUS_MAP.pending;
             return (
               <div
                 key={order.documentId}
@@ -103,7 +103,9 @@ function OrdersContent() {
                   </span>
                   {order.payment && (
                     <span className="text-text-muted text-xs">
-                      Pago: {STATUS_MAP[order.payment.status]?.label || order.payment.status}
+                      Pago:{' '}
+                      {STATUS_MAP[order.payment.paymentStatus]?.label ||
+                        order.payment.paymentStatus}
                     </span>
                   )}
                 </div>

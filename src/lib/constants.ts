@@ -2,6 +2,7 @@ export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'E-commerce Monter
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
 export const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
+export const WOMPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || '';
 
 export const ROUTES = {
   HOME: '/',

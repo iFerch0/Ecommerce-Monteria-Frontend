@@ -16,7 +16,7 @@ export interface Order {
   id: number;
   documentId: string;
   orderNumber: string;
-  status: string;
+  orderStatus: string;
   subtotal: number;
   shippingCost: number;
   total: number;
@@ -31,7 +31,7 @@ export interface Order {
   orderItems: OrderItem[];
   payment: {
     id: number;
-    status: string;
+    paymentStatus: string;
     amount: number;
     wompiTransactionId: string | null;
     paymentMethod: string | null;
@@ -63,6 +63,7 @@ interface OrderState {
     notes: string,
     token: string
   ) => Promise<{ orderNumber: string; total: number; paymentId: string }>;
+  confirmPayment: (orderNumber: string, wompiTransactionId: string, token: string) => Promise<void>;
   fetchMyOrders: (token: string) => Promise<void>;
 }
 
@@ -99,6 +100,22 @@ export const useOrderStore = create<OrderState>((set) => ({
     } catch (error) {
       set({ isLoading: false });
       throw error;
+    }
+  },
+
+  confirmPayment: async (orderNumber, wompiTransactionId, token) => {
+    const res = await fetch(`${API_URL}/api/orders/confirm-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ orderNumber, wompiTransactionId }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error?.error?.message || 'Error al confirmar el pago');
     }
   },
 
