@@ -1,5 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
-const API_TOKEN = process.env.STRAPI_API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
+const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN;
 
 interface FetchAPIOptions {
   endpoint: string;
