@@ -1,9 +1,30 @@
 import Link from 'next/link';
 import { fetchAPI } from '@/lib/strapi';
 import { ProductGrid } from '@/components/product/ProductGrid';
-import { ROUTES, SITE_NAME } from '@/lib/constants';
-import { formatPrice } from '@/lib/utils';
+import { BannerCarousel } from '@/components/ui/BannerCarousel';
+import { ROUTES, SITE_NAME, WHATSAPP_NUMBER } from '@/lib/constants';
 import type { Product, Category } from '@/types/product';
+import type { Banner } from '@/types/cms';
+
+async function getBanners(): Promise<Banner[]> {
+  try {
+    const data = await fetchAPI<{ data: Banner[] }>({
+      endpoint: '/banners',
+      query: {
+        'filters[isActive][$eq]': 'true',
+        populate: 'image,imageMobile',
+        sort: 'sortOrder:asc',
+        'pagination[pageSize]': '10',
+        publicationState: 'live',
+      },
+      revalidate: 60,
+      tags: ['banners'],
+    });
+    return data.data || [];
+  } catch {
+    return [];
+  }
+}
 
 async function getFeaturedProducts(): Promise<Product[]> {
   try {
@@ -51,63 +72,72 @@ const categoryEmojis: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [products, categories] = await Promise.all([getFeaturedProducts(), getCategories()]);
+  const [banners, products, categories] = await Promise.all([
+    getBanners(),
+    getFeaturedProducts(),
+    getCategories(),
+  ]);
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="from-primary via-primary-light to-primary relative overflow-hidden bg-gradient-to-br">
-        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-5" />
-        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:py-24">
-          <div className="max-w-2xl">
-            <div className="bg-accent/20 text-accent-light mb-4 inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium">
-              🏪 Tienda Mayorista en Montería
-            </div>
-            <h1 className="mb-4 text-4xl leading-tight font-extrabold text-white sm:text-5xl lg:text-6xl">
-              Los mejores precios{' '}
-              <span className="from-accent-light to-accent bg-gradient-to-r bg-clip-text text-transparent">
-                al por mayor
-              </span>
-            </h1>
-            <p className="mb-8 text-lg text-gray-300 sm:text-xl">
-              Ropa, calzado y accesorios de calidad con los precios más competitivos de la Costa
-              Caribe. Envíos a todo Colombia.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href={ROUTES.PRODUCTS}
-                className="bg-accent shadow-accent/30 hover:bg-accent-light hover:shadow-accent/40 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:shadow-xl"
-              >
-                Ver catálogo completo →
-              </Link>
-              <Link
-                href={ROUTES.REGISTER}
-                className="rounded-full border border-white/20 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-white/10"
-              >
-                Registrarse como mayorista
-              </Link>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
-            {[
-              { value: '500+', label: 'Productos' },
-              { value: '-25%', label: 'Dto. mayorista' },
-              { value: '24/7', label: 'Pedidos online' },
-              { value: '🇨🇴', label: 'Envío nacional' },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-xl border border-white/10 bg-white/5 p-4 text-center backdrop-blur-sm"
-              >
-                <div className="text-2xl font-bold text-white sm:text-3xl">{stat.value}</div>
-                <div className="mt-1 text-xs text-gray-400">{stat.label}</div>
+      {/* Dynamic Banners — shown when available, fallback to static hero */}
+      {banners.length > 0 ? (
+        <BannerCarousel banners={banners} />
+      ) : (
+        /* Static Hero Fallback */
+        <section className="from-primary via-primary-light to-primary relative overflow-hidden bg-gradient-to-br">
+          <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-5" />
+          <div className="relative mx-auto max-w-7xl px-4 py-16 sm:py-24">
+            <div className="max-w-2xl">
+              <div className="bg-accent/20 text-accent-light mb-4 inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium">
+                🏪 Tienda Mayorista en Montería
               </div>
-            ))}
+              <h1 className="mb-4 text-4xl leading-tight font-extrabold text-white sm:text-5xl lg:text-6xl">
+                Los mejores precios{' '}
+                <span className="from-accent-light to-accent bg-gradient-to-r bg-clip-text text-transparent">
+                  al por mayor
+                </span>
+              </h1>
+              <p className="mb-8 text-lg text-gray-300 sm:text-xl">
+                Ropa, calzado y accesorios de calidad con los precios más competitivos de la Costa
+                Caribe. Envíos a todo Colombia.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href={ROUTES.PRODUCTS}
+                  className="bg-accent shadow-accent/30 hover:bg-accent-light hover:shadow-accent/40 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:shadow-xl"
+                >
+                  Ver catálogo completo →
+                </Link>
+                <Link
+                  href={ROUTES.REGISTER}
+                  className="rounded-full border border-white/20 px-6 py-3 text-sm font-medium text-white transition-all hover:bg-white/10"
+                >
+                  Registrarse como mayorista
+                </Link>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
+              {[
+                { value: '500+', label: 'Productos' },
+                { value: '-25%', label: 'Dto. mayorista' },
+                { value: '24/7', label: 'Pedidos online' },
+                { value: '🇨🇴', label: 'Envío nacional' },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-xl border border-white/10 bg-white/5 p-4 text-center backdrop-blur-sm"
+                >
+                  <div className="text-2xl font-bold text-white sm:text-3xl">{stat.value}</div>
+                  <div className="mt-1 text-xs text-gray-400">{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Categories */}
       {categories.length > 0 && (
@@ -182,7 +212,7 @@ export default async function HomePage() {
                 Crear cuenta mayorista
               </Link>
               <a
-                href={`https://wa.me/${(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '').replace('+', '')}`}
+                href={`https://wa.me/${WHATSAPP_NUMBER.replace(/\D/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-full border border-white/20 px-8 py-3 text-sm font-medium transition-all hover:bg-white/10"

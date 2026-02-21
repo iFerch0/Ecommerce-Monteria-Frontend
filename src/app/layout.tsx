@@ -4,7 +4,9 @@ import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ClientProviders } from '@/components/providers/ClientProviders';
-import { SITE_NAME, SITE_URL } from '@/lib/constants';
+import { fetchAPI } from '@/lib/strapi';
+import { SITE_NAME, SITE_URL, WHATSAPP_NUMBER } from '@/lib/constants';
+import type { GlobalSetting } from '@/types/cms';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -39,15 +41,33 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+async function getWhatsAppConfig(): Promise<{ number: string; message: string }> {
+  try {
+    const data = await fetchAPI<{ data: GlobalSetting }>({
+      endpoint: '/global-setting',
+      revalidate: 300,
+      tags: ['global-setting'],
+    });
+    return {
+      number: data.data?.whatsappNumber || WHATSAPP_NUMBER,
+      message: data.data?.whatsappMessage || 'Hola, me interesa hacer un pedido',
+    };
+  } catch {
+    return { number: WHATSAPP_NUMBER, message: 'Hola, me interesa hacer un pedido' };
+  }
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const whatsapp = await getWhatsAppConfig();
+
   return (
     <html lang="es">
       <body className={`${inter.variable} antialiased`}>
-        <ClientProviders>
+        <ClientProviders whatsappNumber={whatsapp.number} whatsappMessage={whatsapp.message}>
           <Header />
           <main className="min-h-screen">{children}</main>
           <Footer />
