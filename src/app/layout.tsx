@@ -8,6 +8,8 @@ import { fetchAPI } from '@/lib/strapi';
 import { SITE_NAME, SITE_URL, WHATSAPP_NUMBER } from '@/lib/constants';
 import { organizationSchema, webSiteSchema } from '@/lib/seo';
 import { JsonLd } from '@/components/ui/JsonLd';
+import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
+import { FacebookPixel } from '@/components/analytics/FacebookPixel';
 import type { GlobalSetting } from '@/types/cms';
 
 const inter = Inter({
@@ -131,6 +133,9 @@ export default async function RootLayout({
           })}
         />
         <JsonLd schema={webSiteSchema()} />
+
+        <GoogleAnalytics />
+        <FacebookPixel />
 
         <ClientProviders whatsappNumber={whatsapp.number} whatsappMessage={whatsapp.message}>
           <Header />

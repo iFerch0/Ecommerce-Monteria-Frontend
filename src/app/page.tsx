@@ -3,6 +3,7 @@ import { fetchAPI } from '@/lib/strapi';
 import { AnimatedProductGrid } from '@/components/product/AnimatedProductGrid';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
 import { FadeIn } from '@/components/ui/FadeIn';
+import { TrustBadges } from '@/components/ui/TrustBadges';
 import { ROUTES, SITE_NAME, WHATSAPP_NUMBER } from '@/lib/constants';
 import type { Product, Category } from '@/types/product';
 import type { Banner } from '@/types/cms';
@@ -202,6 +203,13 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Trust Badges */}
+      <section className="border-border border-y">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <TrustBadges variant="row" />
+        </div>
+      </section>
 
       {/* Wholesale CTA */}
       <section className="bg-surface-alt">

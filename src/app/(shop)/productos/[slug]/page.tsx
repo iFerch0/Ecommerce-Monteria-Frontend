@@ -8,6 +8,8 @@ import { SITE_NAME, SITE_URL, ROUTES } from '@/lib/constants';
 import Link from 'next/link';
 import { AddToCartButton } from '@/components/product/AddToCartButton';
 import { RelatedProducts } from '@/components/product/RelatedProducts';
+import { ReviewList } from '@/components/review/ReviewList';
+import { ReviewForm } from '@/components/review/ReviewForm';
 import { productSchema, breadcrumbSchema } from '@/lib/seo';
 import { JsonLd } from '@/components/ui/JsonLd';
 
@@ -367,6 +369,12 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Reviews */}
+      <div className="border-border mt-12 border-t pt-10">
+        <ReviewList productDocumentId={product.documentId} />
+        <ReviewForm productDocumentId={product.documentId} />
       </div>
 
       {/* Related Products */}

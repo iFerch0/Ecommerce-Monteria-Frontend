@@ -47,3 +47,21 @@ export interface PriceTier {
   pricePerUnit: number;
   label: string | null;
 }
+
+export interface Review {
+  id: number;
+  documentId: string;
+  rating: number;
+  title: string | null;
+  comment: string;
+  isApproved: boolean;
+  verifiedPurchase: boolean;
+  user: { username: string } | null;
+  createdAt: string;
+}
+
+export interface ReviewSummary {
+  average: number;
+  count: number;
+  distribution: Record<string, number>;
+}
