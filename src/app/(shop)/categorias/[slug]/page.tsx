@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation';
 import { fetchAPI } from '@/lib/strapi';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import type { Product, Category } from '@/types/product';
-import { SITE_NAME, ROUTES } from '@/lib/constants';
+import { SITE_NAME, SITE_URL, ROUTES } from '@/lib/constants';
 import Link from 'next/link';
+import { breadcrumbSchema, itemListSchema } from '@/lib/seo';
+import { JsonLd } from '@/components/ui/JsonLd';
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -47,16 +49,56 @@ async function getProductsByCategory(slug: string): Promise<Product[]> {
   }
 }
 
+// Pre-generate all active categories at build time
+export async function generateStaticParams() {
+  try {
+    const data = await fetchAPI<{ data: Category[] }>({
+      endpoint: '/categories',
+      query: {
+        'filters[isActive][$eq]': 'true',
+        'pagination[pageSize]': '50',
+      },
+    });
+    return (data.data || []).map((c) => ({ slug: c.slug }));
+  } catch {
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { slug } = await params;
   const category = await getCategory(slug);
   if (!category) return {};
 
+  const canonical = `${SITE_URL}${ROUTES.CATEGORIES}/${slug}`;
+  const description =
+    category.description ||
+    `Compra ${category.name} al por mayor en ${SITE_NAME}. Los mejores precios con envíos a todo Colombia.`;
+
   return {
-    title: `${category.name} — Catálogo al por Mayor`,
-    description:
-      category.description ||
-      `Compra ${category.name} al por mayor en ${SITE_NAME}. Los mejores precios.`,
+    title: `${category.name} al por Mayor`,
+    description,
+    keywords: [
+      `${category.name} al por mayor`,
+      `${category.name} mayorista`,
+      `${category.name} Colombia`,
+      `${category.name} Montería`,
+      SITE_NAME,
+    ],
+    alternates: { canonical },
+    openGraph: {
+      title: `${category.name} al por Mayor | ${SITE_NAME}`,
+      description,
+      type: 'website',
+      url: canonical,
+      locale: 'es_CO',
+      siteName: SITE_NAME,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${category.name} al por Mayor | ${SITE_NAME}`,
+      description,
+    },
   };
 }
 
@@ -68,8 +110,18 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
+  const breadcrumbItems = [
+    { name: 'Inicio', url: SITE_URL },
+    { name: 'Categorías', url: `${SITE_URL}${ROUTES.CATEGORIES}` },
+    { name: category.name, url: `${SITE_URL}${ROUTES.CATEGORIES}/${slug}` },
+  ];
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
+      {/* Structured data */}
+      <JsonLd schema={breadcrumbSchema(breadcrumbItems)} />
+      {products.length > 0 && <JsonLd schema={itemListSchema(category, products)} />}
+
       {/* Breadcrumb */}
       <nav className="text-text-secondary mb-6 flex items-center gap-2 text-sm">
         <Link href={ROUTES.HOME} className="hover:text-accent transition-colors">

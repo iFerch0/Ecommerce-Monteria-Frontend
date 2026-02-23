@@ -2,11 +2,39 @@ import type { Metadata } from 'next';
 import { fetchAPI } from '@/lib/strapi';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import type { Product } from '@/types/product';
-import { SITE_NAME } from '@/lib/constants';
+import { SITE_NAME, SITE_URL, ROUTES } from '@/lib/constants';
+import { breadcrumbSchema } from '@/lib/seo';
+import { JsonLd } from '@/components/ui/JsonLd';
+
+const canonical = `${SITE_URL}${ROUTES.PRODUCTS}`;
+const description = `Explora nuestro catálogo completo de ropa, calzado y accesorios al por mayor. ${SITE_NAME}. Los mejores precios con envíos a todo Colombia.`;
 
 export const metadata: Metadata = {
-  title: 'Catálogo de Productos',
-  description: `Explora nuestro catálogo completo de ropa, calzado y accesorios al por mayor. ${SITE_NAME}`,
+  title: 'Catálogo de Productos al por Mayor',
+  description,
+  keywords: [
+    'ropa al por mayor',
+    'calzado mayorista',
+    'accesorios mayorista',
+    'catálogo mayorista',
+    'Colombia',
+    'Montería',
+    SITE_NAME,
+  ],
+  alternates: { canonical },
+  openGraph: {
+    title: `Catálogo al por Mayor | ${SITE_NAME}`,
+    description,
+    type: 'website',
+    url: canonical,
+    locale: 'es_CO',
+    siteName: SITE_NAME,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `Catálogo al por Mayor | ${SITE_NAME}`,
+    description,
+  },
 };
 
 async function getProducts(): Promise<Product[]> {
@@ -28,11 +56,17 @@ async function getProducts(): Promise<Product[]> {
   }
 }
 
+const breadcrumbItems = [
+  { name: 'Inicio', url: SITE_URL },
+  { name: 'Productos', url: canonical },
+];
+
 export default async function ProductsPage() {
   const products = await getProducts();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
+      <JsonLd schema={breadcrumbSchema(breadcrumbItems)} />
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-text mb-2 text-3xl font-bold">Catálogo de Productos</h1>

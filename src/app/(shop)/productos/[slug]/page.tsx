@@ -4,10 +4,12 @@ import Image from 'next/image';
 import { fetchAPI } from '@/lib/strapi';
 import { formatPrice, getImageUrl } from '@/lib/utils';
 import type { Product } from '@/types/product';
-import { SITE_NAME, ROUTES } from '@/lib/constants';
+import { SITE_NAME, SITE_URL, ROUTES } from '@/lib/constants';
 import Link from 'next/link';
 import { AddToCartButton } from '@/components/product/AddToCartButton';
 import { RelatedProducts } from '@/components/product/RelatedProducts';
+import { productSchema, breadcrumbSchema } from '@/lib/seo';
+import { JsonLd } from '@/components/ui/JsonLd';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -30,18 +32,72 @@ async function getProduct(slug: string): Promise<Product | null> {
   }
 }
 
+// Pre-generate the most recently updated products at build time
+export async function generateStaticParams() {
+  try {
+    const data = await fetchAPI<{ data: Product[] }>({
+      endpoint: '/products',
+      query: {
+        'filters[isActive][$eq]': 'true',
+        'pagination[pageSize]': '100',
+        sort: 'updatedAt:desc',
+      },
+    });
+    return (data.data || []).map((p) => ({ slug: p.slug }));
+  } catch {
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProduct(slug);
   if (!product) return {};
 
+  const canonical = `${SITE_URL}${ROUTES.PRODUCTS}/${slug}`;
+  const imageUrl = product.coverImage ? getImageUrl(product.coverImage.url) : undefined;
+  const description =
+    product.shortDescription ||
+    `Compra ${product.name} al por mayor en ${SITE_NAME}. Precio desde ${product.basePrice} COP. Mínimo ${product.minWholesaleQty} unidades. Envíos a todo Colombia.`;
+
+  const keywords = [
+    product.name,
+    product.name + ' al por mayor',
+    product.category?.name || '',
+    product.brand || '',
+    'mayorista Colombia',
+    'Montería',
+    SITE_NAME,
+  ].filter(Boolean);
+
   return {
-    title: product.name,
-    description: product.shortDescription || `${product.name} al por mayor en ${SITE_NAME}`,
+    title: `${product.name} — Al por Mayor`,
+    description,
+    keywords,
+    alternates: { canonical },
     openGraph: {
       title: `${product.name} | ${SITE_NAME}`,
-      description: product.shortDescription || '',
-      images: product.coverImage ? [{ url: getImageUrl(product.coverImage.url) }] : [],
+      description,
+      type: 'website',
+      url: canonical,
+      locale: 'es_CO',
+      siteName: SITE_NAME,
+      images: imageUrl
+        ? [
+            {
+              url: imageUrl,
+              alt: product.name,
+              width: 800,
+              height: 800,
+            },
+          ]
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${product.name} | ${SITE_NAME}`,
+      description,
+      images: imageUrl ? [imageUrl] : [],
     },
   };
 }
@@ -65,8 +121,27 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
   const sortedTiers = [...(product.priceTiers || [])].sort((a, b) => a.minQuantity - b.minQuantity);
 
+  // Breadcrumb items for schema
+  const breadcrumbItems = [
+    { name: 'Inicio', url: SITE_URL },
+    { name: 'Productos', url: `${SITE_URL}${ROUTES.PRODUCTS}` },
+    ...(product.category
+      ? [
+          {
+            name: product.category.name,
+            url: `${SITE_URL}${ROUTES.CATEGORIES}/${product.category.slug}`,
+          },
+        ]
+      : []),
+    { name: product.name, url: `${SITE_URL}${ROUTES.PRODUCTS}/${slug}` },
+  ];
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
+      {/* Structured data */}
+      <JsonLd schema={productSchema(product)} />
+      <JsonLd schema={breadcrumbSchema(breadcrumbItems)} />
+
       {/* Breadcrumb */}
       <nav className="text-text-secondary mb-6 flex items-center gap-2 text-sm">
         <Link href={ROUTES.HOME} className="hover:text-accent transition-colors">
