@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { fetchAPI } from '@/lib/strapi';
-import { ProductGrid } from '@/components/product/ProductGrid';
+import { AnimatedProductGrid } from '@/components/product/AnimatedProductGrid';
 import { BannerCarousel } from '@/components/ui/BannerCarousel';
+import { FadeIn } from '@/components/ui/FadeIn';
 import { ROUTES, SITE_NAME, WHATSAPP_NUMBER } from '@/lib/constants';
 import type { Product, Category } from '@/types/product';
 import type { Banner } from '@/types/cms';
@@ -142,25 +143,30 @@ export default async function HomePage() {
       {/* Categories */}
       {categories.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-12">
-          <div className="mb-8 text-center">
-            <h2 className="text-text mb-2 text-2xl font-bold sm:text-3xl">Explora por categoría</h2>
-            <p className="text-text-secondary">Encuentra todo lo que necesitas para tu negocio</p>
-          </div>
+          <FadeIn>
+            <div className="mb-8 text-center">
+              <h2 className="text-text mb-2 text-2xl font-bold sm:text-3xl">
+                Explora por categoría
+              </h2>
+              <p className="text-text-secondary">Encuentra todo lo que necesitas para tu negocio</p>
+            </div>
+          </FadeIn>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {categories.map((cat) => (
-              <Link
-                key={cat.id}
-                href={`${ROUTES.CATEGORIES}/${cat.slug}`}
-                className="group border-border bg-surface hover:border-accent/30 relative flex flex-col items-center gap-3 rounded-2xl border p-6 text-center transition-all hover:-translate-y-1 hover:shadow-lg"
-              >
-                <span className="text-4xl">{categoryEmojis[cat.slug] || '📂'}</span>
-                <h3 className="text-text group-hover:text-accent text-sm font-semibold">
-                  {cat.name}
-                </h3>
-                {cat.description && (
-                  <p className="text-text-secondary line-clamp-2 text-xs">{cat.description}</p>
-                )}
-              </Link>
+            {categories.map((cat, i) => (
+              <FadeIn key={cat.id} delay={i * 0.08}>
+                <Link
+                  href={`${ROUTES.CATEGORIES}/${cat.slug}`}
+                  className="group border-border bg-surface hover:border-accent/30 relative flex h-full flex-col items-center gap-3 rounded-2xl border p-6 text-center transition-all hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <span className="text-4xl">{categoryEmojis[cat.slug] || '📂'}</span>
+                  <h3 className="text-text group-hover:text-accent text-sm font-semibold">
+                    {cat.name}
+                  </h3>
+                  {cat.description && (
+                    <p className="text-text-secondary line-clamp-2 text-xs">{cat.description}</p>
+                  )}
+                </Link>
+              </FadeIn>
             ))}
           </div>
         </section>
@@ -169,21 +175,23 @@ export default async function HomePage() {
       {/* Featured Products */}
       {products.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-12">
-          <div className="mb-8 flex items-end justify-between">
-            <div>
-              <h2 className="text-text mb-1 text-2xl font-bold sm:text-3xl">
-                Productos destacados
-              </h2>
-              <p className="text-text-secondary">Los más vendidos al por mayor</p>
+          <FadeIn>
+            <div className="mb-8 flex items-end justify-between">
+              <div>
+                <h2 className="text-text mb-1 text-2xl font-bold sm:text-3xl">
+                  Productos destacados
+                </h2>
+                <p className="text-text-secondary">Los más vendidos al por mayor</p>
+              </div>
+              <Link
+                href={ROUTES.PRODUCTS}
+                className="text-accent hover:text-accent-light hidden text-sm font-medium transition-colors sm:block"
+              >
+                Ver todo →
+              </Link>
             </div>
-            <Link
-              href={ROUTES.PRODUCTS}
-              className="text-accent hover:text-accent-light hidden text-sm font-medium transition-colors sm:block"
-            >
-              Ver todo →
-            </Link>
-          </div>
-          <ProductGrid products={products} />
+          </FadeIn>
+          <AnimatedProductGrid products={products} />
           <div className="mt-6 text-center sm:hidden">
             <Link
               href={ROUTES.PRODUCTS}

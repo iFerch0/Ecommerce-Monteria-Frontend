@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getImageUrl, BLUR_DATA_URL } from '@/lib/utils';
 import type { Product } from '@/types/product';
 import { ROUTES } from '@/lib/constants';
-import { getImageUrl } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
@@ -30,6 +29,8 @@ export function ProductCard({ product }: ProductCardProps) {
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
+            placeholder="blur"
+            blurDataURL={BLUR_DATA_URL}
           />
         ) : (
           <div className="text-text-muted flex h-full w-full items-center justify-center text-4xl">

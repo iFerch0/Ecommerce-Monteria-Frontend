@@ -7,6 +7,7 @@ import type { Product } from '@/types/product';
 import { SITE_NAME, ROUTES } from '@/lib/constants';
 import Link from 'next/link';
 import { AddToCartButton } from '@/components/product/AddToCartButton';
+import { RelatedProducts } from '@/components/product/RelatedProducts';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -292,6 +293,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           )}
         </div>
       </div>
+
+      {/* Related Products */}
+      <RelatedProducts currentProductId={product.id} categoryId={product.category?.id ?? null} />
     </div>
   );
 }

@@ -36,3 +36,7 @@ export function getImageUrl(url: string): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
   return `${apiUrl}${url}`;
 }
+
+// Lightweight 1×1 gray blur placeholder (base64 encoded)
+export const BLUR_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN8/5+hHgAHggJ/PchI6QAAAABJRU5ErkJggg==';

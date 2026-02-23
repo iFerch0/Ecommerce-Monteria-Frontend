@@ -55,3 +55,19 @@ body {
   background-color: var(--color-accent);
   color: white;
 }
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f8f9fa 25%, #e5e7eb 50%, #f8f9fa 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
