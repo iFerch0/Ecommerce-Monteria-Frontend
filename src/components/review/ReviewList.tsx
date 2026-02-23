@@ -3,11 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Review, ReviewSummary } from '@/types/product';
 import { StarRating } from './StarRating';
+import { useAuthStore } from '@/stores/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
 
 interface ReviewListProps {
   productDocumentId: string;
+  /** Pass this to trigger a refresh after the user submits a review */
+  refreshKey?: number;
 }
 
 interface ReviewsResponse {
@@ -30,8 +33,59 @@ async function fetchSummary(productId: string): Promise<ReviewSummary> {
   return json.data;
 }
 
-export function ReviewList({ productDocumentId }: ReviewListProps) {
+async function fetchMyReview(productId: string, token: string): Promise<Review | null> {
+  const res = await fetch(`${API_URL}/api/reviews/mine/${productId}`, {
+    cache: 'no-store',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json.data || null;
+}
+
+function ReviewCard({ review, pending = false }: { review: Review; pending?: boolean }) {
+  return (
+    <article
+      className={[
+        'border-border rounded-xl border p-4',
+        pending ? 'bg-surface-alt border-dashed' : 'bg-surface',
+      ].join(' ')}
+    >
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <StarRating value={review.rating} size="sm" />
+          {pending && (
+            <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
+              ⏳ Pendiente de aprobación
+            </span>
+          )}
+          {!pending && review.verifiedPurchase && (
+            <span className="bg-success/10 text-success rounded-full px-2 py-0.5 text-xs font-medium">
+              ✓ Compra verificada
+            </span>
+          )}
+        </div>
+        <span className="text-text-muted text-xs">
+          {new Date(review.createdAt).toLocaleDateString('es-CO', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })}
+        </span>
+      </div>
+      {review.title && <p className="text-text mb-1 font-semibold">{review.title}</p>}
+      <p className="text-text-secondary text-sm">{review.comment}</p>
+      {review.user?.username && (
+        <p className="text-text-muted mt-2 text-xs">— {review.user.username}</p>
+      )}
+    </article>
+  );
+}
+
+export function ReviewList({ productDocumentId, refreshKey = 0 }: ReviewListProps) {
+  const { isAuthenticated, token } = useAuthStore();
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [myReview, setMyReview] = useState<Review | null>(null);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
@@ -41,25 +95,29 @@ export function ReviewList({ productDocumentId }: ReviewListProps) {
     async (p: number) => {
       setLoading(true);
       try {
-        const [rev, sum] = await Promise.all([
+        const [rev, sum, mine] = await Promise.all([
           fetchReviews(productDocumentId, p),
           p === 1 ? fetchSummary(productDocumentId) : Promise.resolve(null),
+          p === 1 && isAuthenticated && token
+            ? fetchMyReview(productDocumentId, token)
+            : Promise.resolve(null),
         ]);
         setReviews(rev.data);
         setPageCount(rev.meta.pagination.pageCount);
         if (sum) setSummary(sum);
+        if (p === 1) setMyReview(mine);
       } catch {
         // silently fail
       } finally {
         setLoading(false);
       }
     },
-    [productDocumentId]
+    [productDocumentId, isAuthenticated, token]
   );
 
   useEffect(() => {
     load(page);
-  }, [load, page]);
+  }, [load, page, refreshKey]);
 
   if (loading && page === 1) {
     return (
@@ -73,6 +131,9 @@ export function ReviewList({ productDocumentId }: ReviewListProps) {
       </div>
     );
   }
+
+  // The pending review from current user (not yet approved)
+  const pendingReview = myReview && !myReview.isApproved ? myReview : null;
 
   return (
     <section className="mt-10">
@@ -108,38 +169,27 @@ export function ReviewList({ productDocumentId }: ReviewListProps) {
         </div>
       )}
 
-      {/* Review cards */}
+      {/* Pending review from current user */}
+      {pendingReview && (
+        <div className="mb-4">
+          <p className="text-text-secondary mb-2 text-xs font-medium tracking-wide uppercase">
+            Tu reseña
+          </p>
+          <ReviewCard review={pendingReview} pending />
+        </div>
+      )}
+
+      {/* Approved reviews */}
       {reviews.length === 0 ? (
         <p className="text-text-muted py-8 text-center text-sm">
-          No hay reseñas aprobadas todavía. ¡Sé el primero!
+          {pendingReview
+            ? 'Aún no hay otras reseñas aprobadas para este producto.'
+            : 'No hay reseñas aprobadas todavía. ¡Sé el primero!'}
         </p>
       ) : (
         <div className="space-y-4">
           {reviews.map((review) => (
-            <article key={review.id} className="border-border bg-surface rounded-xl border p-4">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <StarRating value={review.rating} size="sm" />
-                  {review.verifiedPurchase && (
-                    <span className="bg-success/10 text-success rounded-full px-2 py-0.5 text-xs font-medium">
-                      ✓ Compra verificada
-                    </span>
-                  )}
-                </div>
-                <span className="text-text-muted text-xs">
-                  {new Date(review.createdAt).toLocaleDateString('es-CO', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </span>
-              </div>
-              {review.title && <p className="text-text mb-1 font-semibold">{review.title}</p>}
-              <p className="text-text-secondary text-sm">{review.comment}</p>
-              {review.user?.username && (
-                <p className="text-text-muted mt-2 text-xs">— {review.user.username}</p>
-              )}
-            </article>
+            <ReviewCard key={review.id} review={review} />
           ))}
         </div>
       )}
