@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Review, ReviewSummary } from '@/types/product';
 import { StarRating } from './StarRating';
-import { useAuthStore } from '@/stores/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
 
@@ -11,6 +10,8 @@ interface ReviewListProps {
   productDocumentId: string;
   /** Pass this to trigger a refresh after the user submits a review */
   refreshKey?: number;
+  /** Current user's own review (pending or approved), passed from ReviewSection */
+  myReview?: Review | null;
 }
 
 interface ReviewsResponse {
@@ -31,16 +32,6 @@ async function fetchSummary(productId: string): Promise<ReviewSummary> {
   if (!res.ok) throw new Error('Error al cargar resumen');
   const json = await res.json();
   return json.data;
-}
-
-async function fetchMyReview(productId: string, token: string): Promise<Review | null> {
-  const res = await fetch(`${API_URL}/api/reviews/mine/${productId}`, {
-    cache: 'no-store',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.data || null;
 }
 
 function ReviewCard({ review, pending = false }: { review: Review; pending?: boolean }) {
@@ -82,10 +73,12 @@ function ReviewCard({ review, pending = false }: { review: Review; pending?: boo
   );
 }
 
-export function ReviewList({ productDocumentId, refreshKey = 0 }: ReviewListProps) {
-  const { isAuthenticated, token } = useAuthStore();
+export function ReviewList({
+  productDocumentId,
+  refreshKey = 0,
+  myReview = null,
+}: ReviewListProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [myReview, setMyReview] = useState<Review | null>(null);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
@@ -95,24 +88,20 @@ export function ReviewList({ productDocumentId, refreshKey = 0 }: ReviewListProp
     async (p: number) => {
       setLoading(true);
       try {
-        const [rev, sum, mine] = await Promise.all([
+        const [rev, sum] = await Promise.all([
           fetchReviews(productDocumentId, p),
           p === 1 ? fetchSummary(productDocumentId) : Promise.resolve(null),
-          p === 1 && isAuthenticated && token
-            ? fetchMyReview(productDocumentId, token)
-            : Promise.resolve(null),
         ]);
         setReviews(rev.data);
         setPageCount(rev.meta.pagination.pageCount);
         if (sum) setSummary(sum);
-        if (p === 1) setMyReview(mine);
       } catch {
         // silently fail
       } finally {
         setLoading(false);
       }
     },
-    [productDocumentId, isAuthenticated, token]
+    [productDocumentId]
   );
 
   useEffect(() => {

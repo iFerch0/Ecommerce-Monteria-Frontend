@@ -11,11 +11,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
 interface ReviewFormProps {
   productDocumentId: string;
   onSubmitted?: () => void;
+  /** Has the user completed a purchase of this product? */
+  canReview?: boolean;
+  /** Has the user already submitted a review for this product? */
+  alreadyReviewed?: boolean;
 }
 
 type FormStatus = 'idle' | 'loading' | 'success' | 'error';
 
-export function ReviewForm({ productDocumentId, onSubmitted }: ReviewFormProps) {
+export function ReviewForm({
+  productDocumentId,
+  onSubmitted,
+  canReview = false,
+  alreadyReviewed = false,
+}: ReviewFormProps) {
   const { isAuthenticated, token } = useAuthStore();
   const [rating, setRating] = useState(0);
   const [title, setTitle] = useState('');
@@ -33,6 +42,30 @@ export function ReviewForm({ productDocumentId, onSubmitted }: ReviewFormProps) 
         >
           Iniciar sesión
         </Link>
+      </div>
+    );
+  }
+
+  if (alreadyReviewed) {
+    return (
+      <div className="border-border bg-surface-alt mt-8 rounded-xl border p-6 text-center">
+        <span className="text-3xl">✅</span>
+        <p className="text-text mt-3 font-semibold">Ya dejaste tu reseña</p>
+        <p className="text-text-secondary mt-1 text-sm">
+          Gracias por compartir tu opinión sobre este producto.
+        </p>
+      </div>
+    );
+  }
+
+  if (!canReview) {
+    return (
+      <div className="border-border bg-surface-alt mt-8 rounded-xl border p-6 text-center">
+        <span className="text-3xl">🛒</span>
+        <p className="text-text mt-3 font-semibold">Solo clientes pueden reseñar</p>
+        <p className="text-text-secondary mt-1 text-sm">
+          Debes haber completado una compra de este producto para dejar una reseña.
+        </p>
       </div>
     );
   }
