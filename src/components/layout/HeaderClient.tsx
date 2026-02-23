@@ -2,14 +2,21 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSyncExternalStore } from 'react';
-import { ROUTES, SITE_NAME } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
 import { useCartStore } from '@/stores/cartStore';
 import { useAuthStore } from '@/stores/authStore';
 import { MobileMenu } from './MobileMenu';
 import { SearchBar } from './SearchBar';
 
-export function HeaderClient() {
+interface HeaderClientProps {
+  storeName: string;
+  tagline: string;
+  logoUrl: string | null;
+}
+
+export function HeaderClient({ storeName, tagline, logoUrl }: HeaderClientProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { openCart } = useCartStore();
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -59,12 +66,23 @@ export function HeaderClient() {
 
             {/* Logo */}
             <Link href={ROUTES.HOME} className="flex shrink-0 items-center gap-2">
-              <div className="bg-accent flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold text-white sm:h-10 sm:w-10 sm:text-lg">
-                M
-              </div>
+              {logoUrl ? (
+                <Image
+                  src={logoUrl}
+                  alt={storeName}
+                  width={40}
+                  height={40}
+                  unoptimized
+                  className="h-9 w-9 rounded-lg object-contain sm:h-10 sm:w-10"
+                />
+              ) : (
+                <div className="bg-accent flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold text-white sm:h-10 sm:w-10 sm:text-lg">
+                  {storeName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="hidden sm:block">
-                <p className="text-primary text-lg leading-tight font-bold">{SITE_NAME}</p>
-                <p className="text-text-secondary text-xs">Venta al por Mayor</p>
+                <p className="text-primary text-lg leading-tight font-bold">{storeName}</p>
+                <p className="text-text-secondary text-xs">{tagline}</p>
               </div>
             </Link>
 
@@ -164,7 +182,13 @@ export function HeaderClient() {
       </header>
 
       {/* Mobile drawer */}
-      <MobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+      <MobileMenu
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        storeName={storeName}
+        tagline={tagline}
+        logoUrl={logoUrl}
+      />
     </>
   );
 }

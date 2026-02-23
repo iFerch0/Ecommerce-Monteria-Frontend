@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ClientProviders } from '@/components/providers/ClientProviders';
 import { fetchAPI } from '@/lib/strapi';
+import { getImageUrl } from '@/lib/utils';
 import { SITE_NAME, SITE_URL, WHATSAPP_NUMBER } from '@/lib/constants';
 import { organizationSchema, webSiteSchema } from '@/lib/seo';
 import { JsonLd } from '@/components/ui/JsonLd';
@@ -18,85 +19,11 @@ const inter = Inter({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: `${SITE_NAME} — Venta al por Mayor`,
-    template: `%s | ${SITE_NAME}`,
-  },
-  description:
-    'Tienda mayorista de ropa, calzado y accesorios en Montería, Córdoba. ' +
-    'Los mejores precios al por mayor con envíos a todo Colombia.',
-  keywords: [
-    'ropa al por mayor',
-    'calzado mayorista',
-    'Montería',
-    'Córdoba',
-    'Colombia',
-    'venta al por mayor',
-    'tienda mayorista',
-    'ropa al por mayor Montería',
-    'calzado mayorista Córdoba',
-  ],
-  authors: [{ name: SITE_NAME }],
-  creator: SITE_NAME,
-  publisher: SITE_NAME,
-  alternates: {
-    canonical: SITE_URL,
-  },
-  openGraph: {
-    title: `${SITE_NAME} — Venta al por Mayor`,
-    description:
-      'Los mejores precios al por mayor en ropa, calzado y accesorios. Montería, Córdoba.',
-    type: 'website',
-    locale: 'es_CO',
-    siteName: SITE_NAME,
-    url: SITE_URL,
-    images: [
-      {
-        url: `${SITE_URL}/icons/icon-512.png`,
-        width: 512,
-        height: 512,
-        alt: `${SITE_NAME} — Venta al por Mayor`,
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `${SITE_NAME} — Venta al por Mayor`,
-    description:
-      'Los mejores precios al por mayor en ropa, calzado y accesorios. Montería, Córdoba.',
-    images: [`${SITE_URL}/icons/icon-512.png`],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: SITE_NAME,
-  },
-  icons: {
-    icon: [
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-    ],
-    apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-  },
-};
-
 async function getGlobalSettings(): Promise<GlobalSetting | null> {
   try {
     const data = await fetchAPI<{ data: GlobalSetting }>({
       endpoint: '/global-setting',
+      query: { 'populate[0]': 'logo', 'populate[1]': 'favicon' },
       revalidate: 300,
       tags: ['global-setting'],
     });
@@ -104,6 +31,78 @@ async function getGlobalSettings(): Promise<GlobalSetting | null> {
   } catch {
     return null;
   }
+}
+
+function faviconMime(url: string): string {
+  if (url.endsWith('.svg')) return 'image/svg+xml';
+  if (url.endsWith('.ico')) return 'image/x-icon';
+  if (url.endsWith('.jpg') || url.endsWith('.jpeg')) return 'image/jpeg';
+  if (url.endsWith('.webp')) return 'image/webp';
+  return 'image/png';
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getGlobalSettings();
+  const siteName = settings?.storeName || SITE_NAME;
+  const faviconUrl = settings?.favicon ? getImageUrl(settings.favicon.url) : null;
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: `${siteName} — Venta al por Mayor`,
+      template: `%s | ${siteName}`,
+    },
+    description:
+      settings?.metaDescription ||
+      'Tienda mayorista de ropa, calzado y accesorios en Montería, Córdoba. ' +
+        'Los mejores precios al por mayor con envíos a todo Colombia.',
+    keywords: settings?.metaKeywords
+      ? settings.metaKeywords.split(',').map((k) => k.trim())
+      : ['ropa al por mayor', 'calzado mayorista', 'Montería', 'Córdoba', 'Colombia'],
+    authors: [{ name: siteName }],
+    creator: siteName,
+    publisher: siteName,
+    alternates: { canonical: SITE_URL },
+    openGraph: {
+      title: `${siteName} — Venta al por Mayor`,
+      description:
+        settings?.metaDescription ||
+        'Los mejores precios al por mayor en ropa, calzado y accesorios. Montería, Córdoba.',
+      type: 'website',
+      locale: 'es_CO',
+      siteName,
+      url: SITE_URL,
+      images: [{ url: `${SITE_URL}/icons/icon-512.png`, width: 512, height: 512 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${siteName} — Venta al por Mayor`,
+      description:
+        settings?.metaDescription ||
+        'Los mejores precios al por mayor en ropa, calzado y accesorios. Montería, Córdoba.',
+      images: [`${SITE_URL}/icons/icon-512.png`],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+    },
+    manifest: '/manifest.json',
+    appleWebApp: { capable: true, statusBarStyle: 'default', title: siteName },
+    icons: faviconUrl
+      ? {
+          icon: [{ url: faviconUrl, type: faviconMime(faviconUrl) }],
+          apple: [{ url: faviconUrl }],
+          shortcut: faviconUrl,
+        }
+      : {
+          icon: [
+            { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          ],
+          apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+        },
+  };
 }
 
 export default async function RootLayout({
@@ -120,7 +119,7 @@ export default async function RootLayout({
 
   return (
     <html lang="es">
-      <body className={`${inter.variable} antialiased`}>
+      <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
         {/* Global structured data */}
         <JsonLd
           schema={organizationSchema({

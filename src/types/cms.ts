@@ -29,6 +29,7 @@ export interface GlobalSetting {
   storeName: string;
   tagline: string | null;
   logo: StrapiImage | null;
+  favicon: StrapiImage | null;
   phone: string | null;
   whatsappNumber: string | null;
   whatsappMessage: string | null;

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { fetchAPI } from '@/lib/strapi';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import type { Product, Category } from '@/types/product';
@@ -106,21 +105,18 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
   const [category, products] = await Promise.all([getCategory(slug), getProductsByCategory(slug)]);
 
-  if (!category) {
-    notFound();
-  }
-
+  const categoryName = category?.name ?? slug.replace(/-/g, ' ');
   const breadcrumbItems = [
     { name: 'Inicio', url: SITE_URL },
     { name: 'Categorías', url: `${SITE_URL}${ROUTES.CATEGORIES}` },
-    { name: category.name, url: `${SITE_URL}${ROUTES.CATEGORIES}/${slug}` },
+    { name: categoryName, url: `${SITE_URL}${ROUTES.CATEGORIES}/${slug}` },
   ];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       {/* Structured data */}
       <JsonLd schema={breadcrumbSchema(breadcrumbItems)} />
-      {products.length > 0 && <JsonLd schema={itemListSchema(category, products)} />}
+      {category && products.length > 0 && <JsonLd schema={itemListSchema(category, products)} />}
 
       {/* Breadcrumb */}
       <nav className="text-text-secondary mb-6 flex items-center gap-2 text-sm">
@@ -132,23 +128,39 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           Categorías
         </Link>
         <span>/</span>
-        <span className="text-text">{category.name}</span>
+        <span className="text-text capitalize">{categoryName}</span>
       </nav>
 
       {/* Category Header */}
       <div className="mb-8">
-        <h1 className="text-text mb-2 text-3xl font-bold">{category.name}</h1>
-        {category.description && <p className="text-text-secondary">{category.description}</p>}
-        <p className="text-text-muted mt-2 text-sm">
-          {products.length} producto{products.length !== 1 ? 's' : ''}
-        </p>
+        <h1 className="text-text mb-2 text-3xl font-bold capitalize">{categoryName}</h1>
+        {category?.description && <p className="text-text-secondary">{category.description}</p>}
+        {products.length > 0 && (
+          <p className="text-text-muted mt-2 text-sm">
+            {products.length} producto{products.length !== 1 ? 's' : ''}
+          </p>
+        )}
       </div>
 
-      {/* Product Grid */}
-      <ProductGrid
-        products={products}
-        emptyMessage={`No hay productos en ${category.name} por el momento.`}
-      />
+      {/* Product Grid or empty state */}
+      {products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <span className="mb-4 text-5xl">📦</span>
+          <h2 className="text-text mb-2 text-xl font-semibold">Aún no hay productos aquí</h2>
+          <p className="text-text-secondary mb-6 max-w-sm text-sm">
+            Estamos preparando los productos de esta sección. Vuelve pronto o explora el catálogo
+            completo.
+          </p>
+          <Link
+            href={ROUTES.PRODUCTS}
+            className="bg-accent hover:bg-accent/90 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-colors"
+          >
+            Ver todos los productos
+          </Link>
+        </div>
+      ) : (
+        <ProductGrid products={products} />
+      )}
     </div>
   );
 }

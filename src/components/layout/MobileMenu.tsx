@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ROUTES } from '@/lib/constants';
 import { useCartStore } from '@/stores/cartStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -9,6 +10,9 @@ import { useAuthStore } from '@/stores/authStore';
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  storeName: string;
+  tagline: string;
+  logoUrl: string | null;
 }
 
 const navLinks = [
@@ -22,7 +26,7 @@ const navLinks = [
   { href: ROUTES.POLICIES, label: 'Políticas', emoji: '📋' },
 ];
 
-export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
+export function MobileMenu({ isOpen, onClose, storeName, tagline, logoUrl }: MobileMenuProps) {
   const { isAuthenticated, user, logout } = useAuthStore();
   const { openCart } = useCartStore();
 
@@ -68,12 +72,23 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 p-4">
           <div className="flex items-center gap-2">
-            <div className="bg-accent flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold text-white">
-              M
-            </div>
+            {logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt={storeName}
+                width={36}
+                height={36}
+                unoptimized
+                className="h-9 w-9 rounded-lg object-contain"
+              />
+            ) : (
+              <div className="bg-accent flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold text-white">
+                {storeName.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div>
-              <p className="text-primary text-sm leading-tight font-bold">El Mejor Precio</p>
-              <p className="text-text-secondary text-xs">Venta al por Mayor</p>
+              <p className="text-primary text-sm leading-tight font-bold">{storeName}</p>
+              <p className="text-text-secondary text-xs">{tagline}</p>
             </div>
           </div>
           <button
